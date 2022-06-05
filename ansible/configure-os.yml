@@ -58,7 +58,7 @@
 
 - hosts: worker_nodes
   vars:
-    k3s_token: <k3s-token-redacted>
+    k3s_token: <Place-your-token-here>
     k3s_master_ip: 192.168.0.16
   gather_facts: no
   tasks:
