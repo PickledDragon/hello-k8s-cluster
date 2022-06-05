@@ -12,13 +12,13 @@
       notify: Restart sshd
 
     - name: Install additional utils
-      ansible.builtin.apt:
+      apt:
         name: vim
         state: present
       become: yes
 
     - name: Patch boot parameters to enable cgroup support
-      ansible.builtin.shell: |
+      shell: |
         CMDLINE_FILE="/boot/cmdline.txt"
         IS_PATCHED=$(grep cgroup_memory $CMDLINE_FILE | wc -l)
         echo Patch Applied Status: $IS_PATCHED
@@ -36,7 +36,7 @@
       notify: Reboot
 
     - name: Add information about cluster members to hosts file
-      ansible.builtin.blockinfile:
+      blockinfile:
         path: /etc/hosts
         block: |
           k8s-master.local 192.168.0.16
@@ -45,26 +45,45 @@
       become: yes
 
 
-- hosts: master_nodes
+- hosts: master_node
   gather_facts: no
   tasks:
   - name: Install K3S in server mode
-    ansible.builtin.shell: |
+    shell: |
       curl -sfL https://get.k3s.io | sh -
     args:
       executable: /bin/bash
       creates: /etc/systemd/system/k3s.service
     become: yes
 
+  - name: Wait for port 6443 to open
+    wait_for:
+      port: 6443
+      delay: 10
+
+  - name: Slurp the K3S token from the master node
+    slurp:
+      src: /var/lib/rancher/k3s/server/node-token
+    register: k3s_token
+    become: yes
+
+  - name: debug
+    debug:
+      msg: "{{ k3s_token['content'] | b64decode }}"
+      
+  - name: Use a placeholder for token
+    add_host: 
+      name: "master_host"
+      token: "{{ k3s_token['content'] | b64decode }}"
+
 - hosts: worker_nodes
   vars:
-    k3s_token: <Place-your-token-here>
     k3s_master_ip: 192.168.0.16
   gather_facts: no
   tasks:
   - name: Install K3S in agent mode
-    ansible.builtin.shell: |
-      curl -sfL https://get.k3s.io | K3S_URL=https://{{ k3s_master_ip }}:6443 K3S_TOKEN={{ k3s_token }} sh -
+    shell: |
+      curl -sfL https://get.k3s.io | K3S_URL=https://{{ k3s_master_ip }}:6443 K3S_TOKEN={{ hostvars['master_host']['token'] | trim }} sh -
     args:
       executable: /bin/bash
     become: yes
@@ -72,13 +91,13 @@
 
   handlers:
     - name: Restart sshd
-      ansible.builtin.service:
+      service:
         name: sshd
         state: restarted
       notify: Wait for connection
       become: yes
     - name: Reboot
-      ansible.builtin.reboot:
+      reboot:
       become: yes
     - name: Wait for connection
-      ansible.builtin.wait_for_connection:
+      wait_for_connection:
