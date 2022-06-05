@@ -1,0 +1,14 @@
+[cluster_nodes]
+k8s_master ansible_host=k8s-master.local ansible_user=pi
+k8s_worker_1 ansible_host=k8s-worker-1.local ansible_user=pi
+k8s_worker_2 ansible_host=k8s-worker-2.local ansible_user=pi
+
+[scapegoat]
+k8s_worker_2 ansible_host=k8s-worker-2.local ansible_user=pi
+
+[master_nodes]
+k8s_master ansible_host=k8s-master.local ansible_user=pi
+
+[worker_nodes]
+k8s_worker_1 ansible_host=k8s-worker-1.local ansible_user=pi
+k8s_worker_2 ansible_host=k8s-worker-2.local ansible_user=pi

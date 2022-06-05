@@ -1,0 +1,84 @@
+---
+- hosts: cluster_nodes
+  gather_facts: no
+  tasks:
+    - name: Ensure interactive SSH login is disabled for user `pi`  
+      blockinfile:
+        path: /etc/ssh/sshd_config        
+        insertafter: "^#PermitEmptyPasswords no$"
+        block: |          
+          PasswordAuthentication no
+      become: yes
+      notify: Restart sshd
+
+    - name: Install additional utils
+      ansible.builtin.apt:
+        name: vim
+        state: present
+      become: yes
+
+    - name: Patch boot parameters to enable cgroup support
+      ansible.builtin.shell: |
+        CMDLINE_FILE="/boot/cmdline.txt"
+        IS_PATCHED=$(grep cgroup_memory $CMDLINE_FILE | wc -l)
+        echo Patch Applied Status: $IS_PATCHED
+        if [[ IS_PATCHED -eq  1 ]]
+        then
+          echo "Patch was already applied. Skipping."
+        else
+          echo "Patch was not applied. Will apply patch for cgroup"
+          sed -ibkp 's/\(rootwait\)/\1 cgroup_memory=1 cgroup_enable=memory/g' $CMDLINE_FILE
+        fi
+      args:
+        executable: /bin/bash
+        creates: /boot/cmdline.txtbkp
+      become: yes
+      notify: Reboot
+
+    - name: Add information about cluster members to hosts file
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        block: |
+          k8s-master.local 192.168.0.16
+          k8s-worker-1.local 192.168.0.19
+          k8s-worker-2.local 192.168.0.18
+      become: yes
+
+
+- hosts: master_nodes
+  gather_facts: no
+  tasks:
+  - name: Install K3S in server mode
+    ansible.builtin.shell: |
+      curl -sfL https://get.k3s.io | sh -
+    args:
+      executable: /bin/bash
+      creates: /etc/systemd/system/k3s.service
+    become: yes
+
+- hosts: worker_nodes
+  vars:
+    k3s_token: <k3s-token-redacted>
+    k3s_master_ip: 192.168.0.16
+  gather_facts: no
+  tasks:
+  - name: Install K3S in agent mode
+    ansible.builtin.shell: |
+      curl -sfL https://get.k3s.io | K3S_URL=https://{{ k3s_master_ip }}:6443 K3S_TOKEN={{ k3s_token }} sh -
+    args:
+      executable: /bin/bash
+    become: yes
+
+
+  handlers:
+    - name: Restart sshd
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+      notify: Wait for connection
+      become: yes
+    - name: Reboot
+      ansible.builtin.reboot:
+      become: yes
+    - name: Wait for connection
+      ansible.builtin.wait_for_connection:
