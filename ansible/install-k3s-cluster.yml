@@ -66,10 +66,6 @@
       src: /var/lib/rancher/k3s/server/node-token
     register: k3s_token
     become: yes
-
-  - name: debug
-    debug:
-      msg: "{{ k3s_token['content'] | b64decode }}"
       
   - name: Use a placeholder for token
     add_host: 
