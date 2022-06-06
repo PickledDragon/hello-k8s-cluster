@@ -7,10 +7,10 @@ We use Ansible to setup the cluster. You need to have Ansible installed on the c
 Once you have cloned this repo use the syntax below to run the setup.
 ```bash
 [luser@ansible-controller hello-k8s-cluster]$ cd ansible
-[luser@ansible-controller hello-k8s-cluster]$ ansible-playbook install-k3s-cluster.yml
+[luser@ansible-controller ansible]$ ansible-playbook install-k3s-cluster.yml
 ```
 
-###Assumptions
+### Assumptions
 I have the following host names and IP addresses assigned to the RPi nodes. The scripts do assume this is the case in your network too.
 This whole thing can be modularized but there's hardly any value
 ```bash
