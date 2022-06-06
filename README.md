@@ -12,3 +12,6 @@ Setup scripts for the RPi cluster in my so called "homelab"
 * Each satellite has 4x 1000Mbps 
 * Each RPi connects to an RJ45 port on a satellite - easy peasy
 * 3x Class C IPs are reserved on the base station for the RPis' Mac address 
+
+**Physical view**
+![Physical view](assets/rpi-physical-view.jpg)
